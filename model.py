@@ -43,6 +43,11 @@ measurements = []
 from sklearn.model_selection import train_test_split
 train_samples, validation_samples = train_test_split(samples, test_size=0.2)
 
+def preprocess(image):
+    prc_image = image[50:140,:,:]
+    prc_image = cv2.resize(prc_image,(320,80),interpolation = cv2.INTER_AREA)
+    return prc_image
+
 def generator(samples, batch_size=32):
     num_samples = len(samples)
     while 1: # Loop forever so the generator never terminates
@@ -56,6 +61,7 @@ def generator(samples, batch_size=32):
                 name = 'My_Data/IMG/'+batch_sample[0].split('/')[-1]
                 center_image = cv2.imread(name)
                 center_angle = float(batch_sample[3])
+                center_image = preprocess(center_image)
                 images.append(center_image)
                 angles.append(center_angle)
             # trim image to only see section with road
@@ -74,7 +80,7 @@ ch, row, col = 3, 80, 320  # Trimmed image format
 #y_train = np.array(measurements)
 
 model = Sequential()
-model.add(Lambda(lambda x: x/127.5 - 1.0, input_shape=(160,320,3)))
+model.add(Lambda(lambda x: x/127.5 - 1.0, input_shape=(80,320,3)))
 #model.add(Lambda(lambda x: x/127.5 - 1.0,input_shape=(80, 320, 3)))
 #model.add(Flatten(input_shape=(160, 320, 3)))
 #model.add(Dense(1))
@@ -92,21 +98,22 @@ model.add(Dense(1))
 model.summary()
 model.compile(loss = 'mse', optimizer = 'adam')
 #model.fit(X_train, y_train, validation_split=0.2, shuffle = True, nb_epoch=5)
-model.fit_generator(train_generator, steps_per_epoch= len(train_samples),
-validation_data=validation_generator, validation_steps=len(validation_samples), epochs=5, verbose = 1)
+#model.fit_generator(train_generator, steps_per_epoch= len(train_samples),
 #model.fit_generator(train_generator,validation_data=validation_generator, validation_steps=len(validation_samples), epochs=5, verbose = 1)
-model.save('model.h5')
 
-#history_object = model.fit_generator(train_generator, samples_per_epoch = len(train_samples), validation_data = validation_generator, nb_val_samples = len(validation_samples), nb_epoch=5, verbose=1)
+
+history_object = model.fit_generator(train_generator, samples_per_epoch = len(train_samples), validation_data = validation_generator, nb_val_samples = len(validation_samples), nb_epoch=5, verbose=1)
 
 ### print the keys contained in the history object
-#print(history_object.history.keys())
+print(history_object.history.keys())
 
 ### plot the training and validation loss for each epoch
-#plt.plot(history_object.history['loss'])
-#plt.plot(history_object.history['val_loss'])
-#plt.title('model mean squared error loss')
-#plt.ylabel('mean squared error loss')
-#plt.xlabel('epoch')
-#plt.legend(['training set', 'validation set'], loc='upper right')
-#plt.show()
+plt.plot(history_object.history['loss'])
+plt.plot(history_object.history['val_loss'])
+plt.title('model mean squared error loss')
+plt.ylabel('mean squared error loss')
+plt.xlabel('epoch')
+plt.legend(['training set', 'validation set'], loc='upper right')
+plt.show()
+
+model.save('model.h5')
